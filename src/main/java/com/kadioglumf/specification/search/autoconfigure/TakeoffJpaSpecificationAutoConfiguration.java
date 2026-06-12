@@ -49,8 +49,10 @@ public class TakeoffJpaSpecificationAutoConfiguration {
   public SearchSpecificationBuilder searchSpecificationBuilder(
       TakeoffSearchRequestParser requestParser,
       PredicateFactory predicateFactory,
-      JoinResolver joinResolver) {
-    return new SearchSpecificationBuilder(requestParser, predicateFactory, joinResolver);
+      JoinResolver joinResolver,
+      PathResolver pathResolver) {
+    return new SearchSpecificationBuilder(
+        requestParser, predicateFactory, joinResolver, pathResolver);
   }
 
   @Bean

@@ -153,6 +153,24 @@ public static final SearchFieldRegistry INSTANCE =
 Pagination still comes from Takeoff UI request fields: `currentPage` and `rowsPerPage`.
 `SearchOptions` only defines safety limits and defaults such as `maxPageSize` and default sorting.
 
+Optional fetch plan for list responses:
+
+```java
+public static final SearchFieldRegistry INSTANCE =
+    SearchFieldRegistry.of(
+        SearchOptions.defaults(),
+        List.of(SearchFetchDefinition.left("module"), SearchFetchDefinition.left("level")),
+        RoleSearchField.values());
+```
+
+`SearchJoinDefinition` is for filtering/sorting paths. It does not initialize lazy relations.
+`SearchFetchDefinition` is for the read model you are returning. Use it when your DTO mapping reads
+relations such as `role.getModule().getNameTr()` and you want to avoid N+1 selects.
+
+Fetches are applied only to the content query, not the count query. Prefer fetches for `ManyToOne`
+and `OneToOne` relations in pageable list screens. Be careful with collection fetches in paginated
+queries; they can duplicate root rows and may require `SearchFetchDefinition.leftDistinct(...)`.
+
 ## Filter Type Mapping
 
 - missing/blank type -> `text` -> `CONTAINS`

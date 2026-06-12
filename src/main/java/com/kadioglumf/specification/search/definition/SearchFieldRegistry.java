@@ -5,16 +5,21 @@ import com.kadioglumf.specification.search.exception.SearchValidationException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 public final class SearchFieldRegistry {
   private final Map<String, SearchFieldDefinition> fields;
   private final SearchOptions options;
+  private final List<SearchFetchDefinition> fetches;
 
   private SearchFieldRegistry(
-      Collection<? extends SearchFieldDefinition> definitions, SearchOptions options) {
+      Collection<? extends SearchFieldDefinition> definitions,
+      SearchOptions options,
+      Collection<SearchFetchDefinition> fetches) {
     this.options = options == null ? SearchOptions.defaults() : options;
+    this.fetches = fetches == null ? List.of() : List.copyOf(fetches);
     this.fields = new LinkedHashMap<>();
     for (SearchFieldDefinition definition : definitions) {
       this.fields.put(definition.apiFieldName(), definition);
@@ -23,11 +28,22 @@ public final class SearchFieldRegistry {
 
   public static SearchFieldRegistry of(
       SearchOptions options, SearchFieldDefinition... definitions) {
-    return new SearchFieldRegistry(Arrays.asList(definitions), options);
+    return new SearchFieldRegistry(Arrays.asList(definitions), options, List.of());
+  }
+
+  public static SearchFieldRegistry of(
+      SearchOptions options,
+      Collection<SearchFetchDefinition> fetches,
+      SearchFieldDefinition... definitions) {
+    return new SearchFieldRegistry(Arrays.asList(definitions), options, fetches);
   }
 
   public SearchOptions options() {
     return options;
+  }
+
+  public List<SearchFetchDefinition> fetches() {
+    return fetches;
   }
 
   public Optional<SearchFieldDefinition> find(String apiFieldName) {
