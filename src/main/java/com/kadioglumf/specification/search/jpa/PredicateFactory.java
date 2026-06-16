@@ -3,9 +3,9 @@ package com.kadioglumf.specification.search.jpa;
 import com.kadioglumf.specification.search.definition.SearchFieldDefinition;
 import com.kadioglumf.specification.search.definition.SearchOperator;
 import com.kadioglumf.specification.search.definition.SearchOptions;
-import com.kadioglumf.specification.search.exception.SearchErrorCode;
-import com.kadioglumf.specification.search.exception.SearchValidationException;
+import com.kadioglumf.specification.search.error.SearchErrorCode;
 import com.kadioglumf.specification.search.takeoff.NormalizedSearchFilter;
+import com.thy.bagstar.bagstarcore.error.exception.BusinessException;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.From;
@@ -103,8 +103,7 @@ public class PredicateFactory {
       case LESS_THAN -> cb.lessThan(expression, comparableValue);
       case LESS_THAN_OR_EQUAL -> cb.lessThanOrEqualTo(expression, comparableValue);
       default ->
-          throw new SearchValidationException(
-              SearchErrorCode.UNSUPPORTED_OPERATOR, "Unsupported operator for field.");
+          throw new BusinessException(SearchErrorCode.UNSUPPORTED_OPERATOR);
     };
   }
 
@@ -112,7 +111,6 @@ public class PredicateFactory {
     if (value instanceof Comparable<?> comparable) {
       return comparable;
     }
-    throw new SearchValidationException(
-        SearchErrorCode.INVALID_VALUE_TYPE, "Comparable filter value is required.");
+    throw new BusinessException(SearchErrorCode.INVALID_VALUE_TYPE);
   }
 }

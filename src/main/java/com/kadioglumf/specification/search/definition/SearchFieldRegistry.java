@@ -1,7 +1,8 @@
 package com.kadioglumf.specification.search.definition;
 
-import com.kadioglumf.specification.search.exception.SearchErrorCode;
-import com.kadioglumf.specification.search.exception.SearchValidationException;
+import com.kadioglumf.specification.search.error.SearchErrorCode;
+import com.thy.bagstar.bagstarcore.error.exception.BusinessException;
+
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -53,8 +54,7 @@ public final class SearchFieldRegistry {
   public SearchFieldDefinition requireFilterable(String apiFieldName) {
     SearchFieldDefinition definition = requireKnown(apiFieldName);
     if (!definition.filterable()) {
-      throw new SearchValidationException(
-          SearchErrorCode.FIELD_NOT_FILTERABLE, "Field is not filterable.");
+      throw new BusinessException(SearchErrorCode.FIELD_NOT_FILTERABLE);
     }
     return definition;
   }
@@ -62,8 +62,7 @@ public final class SearchFieldRegistry {
   public SearchFieldDefinition requireSortable(String apiFieldName) {
     SearchFieldDefinition definition = requireKnown(apiFieldName);
     if (!definition.sortable()) {
-      throw new SearchValidationException(
-          SearchErrorCode.FIELD_NOT_SORTABLE, "Field is not sortable.");
+      throw new BusinessException(SearchErrorCode.FIELD_NOT_SORTABLE);
     }
     return definition;
   }
@@ -71,7 +70,7 @@ public final class SearchFieldRegistry {
   public SearchFieldDefinition requireKnown(String apiFieldName) {
     SearchFieldDefinition definition = fields.get(apiFieldName);
     if (definition == null) {
-      throw new SearchValidationException(SearchErrorCode.UNKNOWN_FIELD, "Unknown search field.");
+      throw new BusinessException(SearchErrorCode.UNKNOWN_FIELD);
     }
     return definition;
   }

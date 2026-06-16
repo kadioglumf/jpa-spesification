@@ -1,8 +1,9 @@
 package com.kadioglumf.specification.search.jpa;
 
 import com.kadioglumf.specification.search.definition.SearchFieldDefinition;
-import com.kadioglumf.specification.search.exception.SearchErrorCode;
-import com.kadioglumf.specification.search.exception.SearchValidationException;
+import com.kadioglumf.specification.search.error.SearchErrorCode;
+import com.thy.bagstar.bagstarcore.error.exception.BusinessException;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -18,13 +19,12 @@ public class SearchValueConverter {
   public Object convertSingle(SearchFieldDefinition definition, Object value) {
     if (value instanceof Collection<?> collection) {
       if (collection.size() != 1) {
-        throw new SearchValidationException(
-            SearchErrorCode.INVALID_VALUE_TYPE, "Single filter value is required.");
+        throw new BusinessException(SearchErrorCode.INVALID_VALUE_TYPE);
       }
       value = collection.iterator().next();
     }
     if (value == null) {
-      throw new SearchValidationException(SearchErrorCode.EMPTY_VALUE, "Filter value is required.");
+      throw new BusinessException(SearchErrorCode.EMPTY_VALUE);
     }
     value = unwrapSingleDateSelection(value);
     return switch (definition.fieldType()) {
@@ -53,8 +53,7 @@ public class SearchValueConverter {
   public List<Object> convertRange(SearchFieldDefinition definition, Object value) {
     List<Object> rawValues = toRangeList(value);
     if (rawValues.size() != 2) {
-      throw new SearchValidationException(
-          SearchErrorCode.INVALID_VALUE_TYPE, "Range filter requires two values.");
+      throw new BusinessException(SearchErrorCode.INVALID_VALUE_TYPE);
     }
     return List.of(
         convertSingle(definition, rawValues.get(0)), convertSingle(definition, rawValues.get(1)));
@@ -88,8 +87,7 @@ public class SearchValueConverter {
         return map.get(key);
       }
     }
-    throw new SearchValidationException(
-        SearchErrorCode.INVALID_VALUE_TYPE, "Range filter requires from and to values.");
+    throw new BusinessException(SearchErrorCode.INVALID_VALUE_TYPE);
   }
 
   private Object unwrapSingleDateSelection(Object value) {
@@ -110,7 +108,7 @@ public class SearchValueConverter {
     try {
       return Long.valueOf(value.toString());
     } catch (NumberFormatException ex) {
-      throw new SearchValidationException(SearchErrorCode.INVALID_NUMBER, "Invalid number value.");
+      throw new BusinessException(SearchErrorCode.INVALID_NUMBER);
     }
   }
 
@@ -121,7 +119,7 @@ public class SearchValueConverter {
     try {
       return Integer.valueOf(value.toString());
     } catch (NumberFormatException ex) {
-      throw new SearchValidationException(SearchErrorCode.INVALID_NUMBER, "Invalid number value.");
+      throw new BusinessException(SearchErrorCode.INVALID_NUMBER);
     }
   }
 
@@ -135,7 +133,7 @@ public class SearchValueConverter {
     try {
       return new BigDecimal(value.toString());
     } catch (NumberFormatException ex) {
-      throw new SearchValidationException(SearchErrorCode.INVALID_NUMBER, "Invalid number value.");
+      throw new BusinessException(SearchErrorCode.INVALID_NUMBER);
     }
   }
 
@@ -150,7 +148,7 @@ public class SearchValueConverter {
     if ("false".equals(normalized)) {
       return false;
     }
-    throw new SearchValidationException(SearchErrorCode.INVALID_BOOLEAN, "Invalid boolean value.");
+    throw new BusinessException(SearchErrorCode.INVALID_BOOLEAN);
   }
 
   private LocalDate convertLocalDate(Object value) {
@@ -160,7 +158,7 @@ public class SearchValueConverter {
     try {
       return LocalDate.parse(value.toString());
     } catch (RuntimeException ex) {
-      throw new SearchValidationException(SearchErrorCode.INVALID_DATE, "Invalid date value.");
+      throw new BusinessException(SearchErrorCode.INVALID_DATE);
     }
   }
 
@@ -171,7 +169,7 @@ public class SearchValueConverter {
     try {
       return LocalDateTime.parse(value.toString());
     } catch (RuntimeException ex) {
-      throw new SearchValidationException(SearchErrorCode.INVALID_DATE, "Invalid date-time value.");
+      throw new BusinessException(SearchErrorCode.INVALID_DATE);
     }
   }
 
@@ -182,8 +180,7 @@ public class SearchValueConverter {
     try {
       return OffsetDateTime.parse(value.toString());
     } catch (RuntimeException ex) {
-      throw new SearchValidationException(
-          SearchErrorCode.INVALID_DATE, "Invalid offset date-time value.");
+      throw new BusinessException(SearchErrorCode.INVALID_DATE);
     }
   }
 
@@ -194,7 +191,7 @@ public class SearchValueConverter {
     try {
       return Instant.parse(value.toString());
     } catch (RuntimeException ex) {
-      throw new SearchValidationException(SearchErrorCode.INVALID_DATE, "Invalid instant value.");
+      throw new BusinessException(SearchErrorCode.INVALID_DATE);
     }
   }
 
@@ -204,14 +201,13 @@ public class SearchValueConverter {
             .enumClass()
             .orElseThrow(
                 () ->
-                    new SearchValidationException(
-                        SearchErrorCode.INVALID_VALUE_TYPE, "Enum field is not configured."));
+                    new BusinessException(SearchErrorCode.INVALID_VALUE_TYPE));
     String normalized = value.toString().trim();
     for (Enum<?> enumConstant : enumClass.getEnumConstants()) {
       if (enumConstant.name().equalsIgnoreCase(normalized)) {
         return enumConstant;
       }
     }
-    throw new SearchValidationException(SearchErrorCode.INVALID_VALUE_TYPE, "Invalid enum value.");
+    throw new BusinessException(SearchErrorCode.INVALID_VALUE_TYPE);
   }
 }

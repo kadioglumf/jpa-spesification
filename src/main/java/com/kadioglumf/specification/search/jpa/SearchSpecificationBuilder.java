@@ -2,11 +2,11 @@ package com.kadioglumf.specification.search.jpa;
 
 import com.kadioglumf.specification.search.definition.SearchFetchDefinition;
 import com.kadioglumf.specification.search.definition.SearchFieldRegistry;
-import com.kadioglumf.specification.search.exception.SearchErrorCode;
-import com.kadioglumf.specification.search.exception.SearchValidationException;
+import com.kadioglumf.specification.search.error.SearchErrorCode;
 import com.kadioglumf.specification.search.takeoff.NormalizedSearchFilter;
 import com.kadioglumf.specification.search.takeoff.TakeoffSearchRequestParser;
 import com.kadioglumf.specification.search.takeoff.TakeoffTableRequest;
+import com.thy.bagstar.bagstarcore.error.exception.BusinessException;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Fetch;
@@ -108,8 +108,7 @@ public class SearchSpecificationBuilder {
       case "asc" -> Sort.Direction.ASC;
       case "desc" -> Sort.Direction.DESC;
       default ->
-          throw new SearchValidationException(
-              SearchErrorCode.INVALID_SORT_ORDER, "Invalid sort order.");
+          throw new BusinessException(SearchErrorCode.INVALID_SORT_ORDER);
     };
   }
 

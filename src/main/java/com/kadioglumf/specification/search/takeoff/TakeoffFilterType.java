@@ -2,8 +2,9 @@ package com.kadioglumf.specification.search.takeoff;
 
 import com.kadioglumf.specification.search.definition.SearchOperator;
 import com.kadioglumf.specification.search.definition.SearchOptions;
-import com.kadioglumf.specification.search.exception.SearchErrorCode;
-import com.kadioglumf.specification.search.exception.SearchValidationException;
+import com.kadioglumf.specification.search.error.SearchErrorCode;
+import com.thy.bagstar.bagstarcore.error.exception.BusinessException;
+
 import java.util.Collection;
 import java.util.Locale;
 import java.util.Map;
@@ -22,8 +23,7 @@ public enum TakeoffFilterType {
     try {
       return TakeoffFilterType.valueOf(value.trim().toUpperCase(Locale.ROOT));
     } catch (IllegalArgumentException ex) {
-      throw new SearchValidationException(
-          SearchErrorCode.UNSUPPORTED_FILTER_TYPE, "Unsupported filter type.");
+      throw new BusinessException(SearchErrorCode.UNSUPPORTED_FILTER_TYPE);
     }
   }
 

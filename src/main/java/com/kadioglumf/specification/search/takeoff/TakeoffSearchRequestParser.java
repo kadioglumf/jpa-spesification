@@ -5,8 +5,9 @@ import com.kadioglumf.specification.search.definition.SearchFieldRegistry;
 import com.kadioglumf.specification.search.definition.SearchFieldType;
 import com.kadioglumf.specification.search.definition.SearchOperator;
 import com.kadioglumf.specification.search.definition.SearchOptions;
-import com.kadioglumf.specification.search.exception.SearchErrorCode;
-import com.kadioglumf.specification.search.exception.SearchValidationException;
+import com.kadioglumf.specification.search.error.SearchErrorCode;
+import com.thy.bagstar.bagstarcore.error.exception.BusinessException;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -17,20 +18,16 @@ public class TakeoffSearchRequestParser {
       TakeoffTableRequest request, SearchFieldRegistry registry) {
     SearchOptions options = registry.options();
     if (request == null) {
-      throw new SearchValidationException(
-          SearchErrorCode.EMPTY_VALUE, "Search request is required.");
+      throw new BusinessException(SearchErrorCode.INVALID_REQUEST);
     }
     if (request.filters() == null) {
-      throw new SearchValidationException(SearchErrorCode.EMPTY_VALUE, "Filters are required.");
+      return List.of();
     }
     if (request.filters().size() > options.maxFilters()) {
-      throw new SearchValidationException(SearchErrorCode.TOO_MANY_FILTERS, "Too many filters.");
+      throw new BusinessException(SearchErrorCode.TOO_MANY_FILTERS, "Too many filters.");
     }
     List<NormalizedSearchFilter> normalizedFilters = new ArrayList<>();
     for (TakeoffTableFilter filter : request.filters()) {
-      if (filter == null || filter.field() == null || filter.field().isBlank()) {
-        throw new SearchValidationException(SearchErrorCode.UNKNOWN_FIELD, "Unknown search field.");
-      }
       SearchFieldDefinition definition = registry.requireFilterable(filter.field());
       TakeoffFilterType takeoffType = TakeoffFilterType.from(filter.type());
       SearchOperator operator =
@@ -63,17 +60,14 @@ public class TakeoffSearchRequestParser {
   }
 
   private void validateValuePresence(Object value, TakeoffFilterType type) {
-    if (value == null) {
-      throw new SearchValidationException(SearchErrorCode.EMPTY_VALUE, "Filter value is required.");
-    }
     if (value instanceof String stringValue
         && stringValue.isBlank()
         && type != TakeoffFilterType.TEXT) {
-      throw new SearchValidationException(SearchErrorCode.EMPTY_VALUE, "Filter value is required.");
+      throw new BusinessException(SearchErrorCode.EMPTY_VALUE);
     }
     if ((type == TakeoffFilterType.CHECKBOX || type == TakeoffFilterType.TREEVIEW)
         && collectionSize(value) == 0) {
-      throw new SearchValidationException(SearchErrorCode.EMPTY_VALUE, "Filter value is required.");
+      throw new BusinessException(SearchErrorCode.EMPTY_VALUE);
     }
   }
 
@@ -89,15 +83,14 @@ public class TakeoffSearchRequestParser {
 
   private void validateOperator(SearchFieldDefinition definition, SearchOperator operator) {
     if (!definition.allowedOperators().contains(operator)) {
-      throw new SearchValidationException(
-          SearchErrorCode.UNSUPPORTED_OPERATOR, "Unsupported operator for field.");
+      throw new BusinessException(SearchErrorCode.UNSUPPORTED_OPERATOR);
     }
   }
 
   private void validateInSize(SearchOperator operator, Object value, SearchOptions options) {
     if ((operator == SearchOperator.IN || operator == SearchOperator.NOT_IN)
         && collectionSize(value) > options.maxInValues()) {
-      throw new SearchValidationException(
+      throw new BusinessException(
           SearchErrorCode.TOO_MANY_IN_VALUES, "Too many filter values.");
     }
   }
