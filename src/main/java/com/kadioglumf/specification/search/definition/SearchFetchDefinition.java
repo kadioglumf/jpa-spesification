@@ -20,4 +20,8 @@ public record SearchFetchDefinition(String path, JoinType joinType, boolean dist
   public static SearchFetchDefinition leftDistinct(String path) {
     return new SearchFetchDefinition(path, JoinType.LEFT, true);
   }
+
+  public static SearchFetchDefinition innerDistinct(String path) {
+    return new SearchFetchDefinition(path, JoinType.INNER, true);
+  }
 }

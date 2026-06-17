@@ -42,24 +42,18 @@ public class PredicateFactory {
           createInPredicate(path, valueConverter.convertList(definition, filter.value()), true);
       case BETWEEN ->
           createBetweenPredicate(cb, path, valueConverter.convertRange(definition, filter.value()));
-      case GREATER_THAN ->
-          createComparablePredicate(
-              cb, path, valueConverter.convertSingle(definition, filter.value()), operator);
-      case GREATER_THAN_OR_EQUAL ->
-          createComparablePredicate(
-              cb, path, valueConverter.convertSingle(definition, filter.value()), operator);
-      case LESS_THAN ->
-          createComparablePredicate(
-              cb, path, valueConverter.convertSingle(definition, filter.value()), operator);
-      case LESS_THAN_OR_EQUAL ->
-          createComparablePredicate(
-              cb, path, valueConverter.convertSingle(definition, filter.value()), operator);
       case STARTS_WITH ->
           createLikePredicate(cb, path, definition, filter.value(), options, "", "%");
       case ENDS_WITH -> createLikePredicate(cb, path, definition, filter.value(), options, "%", "");
       case CONTAINS -> createLikePredicate(cb, path, definition, filter.value(), options, "%", "%");
       case IS_NULL -> cb.isNull(path);
       case IS_NOT_NULL -> cb.isNotNull(path);
+      case GREATER_THAN,
+           GREATER_THAN_OR_EQUAL,
+           LESS_THAN,
+           LESS_THAN_OR_EQUAL ->
+              createComparablePredicate(
+                      cb, path, valueConverter.convertSingle(definition, filter.value()), operator);
     };
   }
 
