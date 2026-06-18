@@ -2,7 +2,6 @@ package com.kadioglumf.specification.search.takeoff;
 
 import com.kadioglumf.specification.search.definition.SearchFieldDefinition;
 import com.kadioglumf.specification.search.definition.SearchFieldRegistry;
-import com.kadioglumf.specification.search.definition.SearchFieldType;
 import com.kadioglumf.specification.search.definition.SearchOperator;
 import com.kadioglumf.specification.search.definition.SearchOptions;
 import com.kadioglumf.specification.search.error.SearchErrorCode;
@@ -16,7 +15,9 @@ import java.util.Map;
 public class TakeoffSearchRequestParser {
   public List<NormalizedSearchFilter> parseFilters(
       TakeoffTableRequest request, SearchFieldRegistry registry) {
+
     SearchOptions options = registry.options();
+
     if (request == null) {
       throw new BusinessException(SearchErrorCode.INVALID_REQUEST);
     }
@@ -26,19 +27,16 @@ public class TakeoffSearchRequestParser {
     if (request.filters().size() > options.maxFilters()) {
       throw new BusinessException(SearchErrorCode.TOO_MANY_FILTERS, "Too many filters.");
     }
+
     List<NormalizedSearchFilter> normalizedFilters = new ArrayList<>();
     for (TakeoffTableFilter filter : request.filters()) {
       SearchFieldDefinition definition = registry.requireFilterable(filter.field());
       TakeoffFilterType takeoffType = TakeoffFilterType.from(filter.type());
-      SearchOperator operator =
-          definition
-              .defaultOperatorOverrides()
-              .getOrDefault(takeoffType, takeoffType.defaultOperator(filter.value(), options));
+      SearchOperator operator = takeoffType.defaultOperator(filter.value());
       if (shouldIgnore(filter.value(), takeoffType, options)) {
         continue;
       }
       validateValuePresence(filter.value(), takeoffType);
-      operator = normalizeBooleanCheckboxOperator(definition, operator, filter.value());
       validateOperator(definition, operator);
       validateInSize(operator, filter.value(), options);
       normalizedFilters.add(
@@ -54,9 +52,7 @@ public class TakeoffSearchRequestParser {
         && stringValue.isBlank()) {
       return true;
     }
-    return type == TakeoffFilterType.CHECKBOX
-        && options.ignoreEmptyCheckboxFilters()
-        && collectionSize(value) == 0;
+    return false;
   }
 
   private void validateValuePresence(Object value, TakeoffFilterType type) {
@@ -65,20 +61,9 @@ public class TakeoffSearchRequestParser {
         && type != TakeoffFilterType.TEXT) {
       throw new BusinessException(SearchErrorCode.EMPTY_VALUE);
     }
-    if ((type == TakeoffFilterType.CHECKBOX || type == TakeoffFilterType.TREEVIEW)
-        && collectionSize(value) == 0) {
+    if (collectionSize(value) == 0) {
       throw new BusinessException(SearchErrorCode.EMPTY_VALUE);
     }
-  }
-
-  private SearchOperator normalizeBooleanCheckboxOperator(
-      SearchFieldDefinition definition, SearchOperator operator, Object value) {
-    if (definition.fieldType() == SearchFieldType.BOOLEAN
-        && operator == SearchOperator.IN
-        && collectionSize(value) == 1) {
-      return SearchOperator.EQUAL;
-    }
-    return operator;
   }
 
   private void validateOperator(SearchFieldDefinition definition, SearchOperator operator) {

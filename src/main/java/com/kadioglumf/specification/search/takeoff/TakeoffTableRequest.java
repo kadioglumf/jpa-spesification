@@ -20,4 +20,7 @@ public record TakeoffTableRequest(
         String sortOrder,
 
         @Valid
+        List<TakeoffTableSort> sorts,
+
+        @Valid
         List<TakeoffTableFilter> filters) {}

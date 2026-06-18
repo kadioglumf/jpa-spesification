@@ -1,8 +1,6 @@
 package com.kadioglumf.specification.search.definition;
 
-import com.kadioglumf.specification.search.takeoff.TakeoffFilterType;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -11,13 +9,19 @@ public interface SearchFieldDefinition {
 
   String entityPath();
 
-  SearchFieldType fieldType();
+  default SearchFieldType fieldType() {
+    return SearchFieldType.STRING;
+  }
 
   Set<SearchOperator> allowedOperators();
 
-  boolean filterable();
+  default boolean filterable() {
+    return true;
+  }
 
-  boolean sortable();
+  default boolean sortable() {
+    return true;
+  }
 
   default boolean caseInsensitive() {
     return true;
@@ -29,10 +33,6 @@ public interface SearchFieldDefinition {
 
   default boolean distinctRequired() {
     return false;
-  }
-
-  default Map<TakeoffFilterType, SearchOperator> defaultOperatorOverrides() {
-    return Map.of();
   }
 
   default Optional<Class<? extends Enum<?>>> enumClass() {

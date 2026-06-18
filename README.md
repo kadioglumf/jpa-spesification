@@ -26,8 +26,16 @@ The library supports Takeoff UI Table's server-side request shape:
 {
   "currentPage": 1,
   "rowsPerPage": 10,
-  "sortField": "roleName",
-  "sortOrder": "asc",
+  "sorts": [
+    {
+      "field": "roleName",
+      "order": "asc"
+    },
+    {
+      "field": "id",
+      "order": "desc"
+    }
+  ],
   "filters": [
     {
       "field": "roleName",
@@ -36,14 +44,15 @@ The library supports Takeoff UI Table's server-side request shape:
     },
     {
       "field": "active",
-      "type": "checkbox",
-      "value": ["true"]
+      "type": "boolean",
+      "value": true
     }
   ]
 }
 ```
 
-Takeoff UI `filterType` values are `text`, `checkbox`, `radio`, `datepicker`, and `treeview`. The request `type` is optional; a missing type is treated as `text`.
+Supported request `type` values are `number`, `text`, `boolean`, and `date`. The request `type` is optional; a missing type is treated as `text`.
+Use `sorts` for multi-field sorting. Each sort item contains an API `field` and `order` (`asc` or `desc`). Blank sort order defaults to ascending. If `sorts` is missing or empty, legacy `sortField`/`sortOrder` is still accepted. If no request sort is provided, no sorting is applied.
 
 ## Takeoff Response
 
@@ -93,34 +102,26 @@ public interface RoleRepository
 ## Field Registry
 
 Each consuming service owns its registry. The frontend sends API field names only; the service maps those names to entity paths, field types, allowed operators, joins, and sort/filter permissions.
+Fields are filterable and sortable by default. Override `filterable()` or `sortable()` only when a field should be blocked for that operation.
 
 ```java
 public enum RoleSearchField implements SearchFieldDefinition {
-  ROLE_NAME(
-      "roleName",
-      "nameTr",
-      SearchFieldType.STRING,
-      Set.of(SearchOperator.CONTAINS, SearchOperator.STARTS_WITH, SearchOperator.EQUAL),
-      true,
-      true),
+	  ROLE_NAME(
+	      "roleName",
+	      "nameTr",
+	      Set.of(SearchOperator.CONTAINS)),
 
-  ACTIVE(
-      "active",
-      "active",
-      SearchFieldType.BOOLEAN,
-      Set.of(SearchOperator.EQUAL, SearchOperator.IN),
-      true,
-      true),
+	  ACTIVE(
+	      "active",
+	      "active",
+	      SearchFieldType.BOOLEAN,
+	      Set.of(SearchOperator.EQUAL, SearchOperator.IN)),
 
-  MODULE_NAME(
-      "moduleName",
-      "module.nameTr",
-      SearchFieldType.STRING,
-      Set.of(SearchOperator.CONTAINS, SearchOperator.STARTS_WITH, SearchOperator.EQUAL),
-      true,
-      true,
-      List.of(SearchJoinDefinition.left("module")),
-      false);
+	  MODULE_NAME(
+	      "moduleName",
+	      "module.nameTr",
+	      Set.of(SearchOperator.CONTAINS),
+	      List.of(SearchJoinDefinition.left("module")));
 
   // implement SearchFieldDefinition methods or use your own class/builder
 }
@@ -140,18 +141,12 @@ Custom options:
 ```java
 public static final SearchFieldRegistry INSTANCE =
     SearchFieldRegistry.of(
-        SearchOptions.builder()
-            .maxPageSize(250)
-            .maxFilters(30)
-            .maxInValues(200)
-            .defaultSortField("id")
-            .defaultSortDirection(Sort.Direction.DESC)
-            .build(),
+        new SearchOptions(20, 250, 30, 200, true, true),
         RoleSearchField.values());
 ```
 
 Pagination still comes from Takeoff UI request fields: `currentPage` and `rowsPerPage`.
-`SearchOptions` only defines safety limits and defaults such as `maxPageSize` and default sorting.
+Sorting comes from `sorts` when provided. `SearchOptions` only defines safety limits and text matching behavior such as `maxPageSize` and `ignoreBlankTextFilters`.
 
 Optional fetch plan for list responses:
 
@@ -175,19 +170,18 @@ queries; they can duplicate root rows and may require `SearchFetchDefinition.lef
 
 - missing/blank type -> `text` -> `CONTAINS`
 - `text` -> `CONTAINS`
-- `checkbox` -> `IN`, or `EQUAL` for a single boolean checkbox value
-- `radio` -> `EQUAL`
-- `datepicker` -> `EQUAL` or `BETWEEN` depending on value shape
-- `treeview` -> `IN`
+- `number` -> `EQUAL` for a single value, `IN` for a list
+- `boolean` -> `EQUAL`
+- `date` -> `EQUAL` for a single value, `BETWEEN` for a range map, `IN` for a list
 
-`treeview` and `checkbox` both map to `IN`, but they represent different Takeoff UI controls. `treeview` values should still be primitive selected keys/codes, not full tree node objects.
+Old Takeoff UI-control type names such as `checkbox`, `radio`, `datepicker`, and `treeview` are not aliases. They are rejected as unsupported filter types.
 
-## Datepicker Values
+## Date Values
 
 Single date:
 
 ```json
-{ "field": "createdAt", "type": "datepicker", "value": "2026-06-12" }
+{ "field": "createdAt", "type": "date", "value": "2026-06-12" }
 ```
 
 Range:
@@ -195,7 +189,7 @@ Range:
 ```json
 {
   "field": "createdAt",
-  "type": "datepicker",
+  "type": "date",
   "value": {
     "from": "2026-06-01",
     "to": "2026-06-12"
@@ -204,6 +198,14 @@ Range:
 ```
 
 The converter also accepts range keys like `start/end`, `min/max`, `begin/finish`, and `startDate/endDate`.
+
+Date list:
+
+```json
+{ "field": "createdAt", "type": "date", "value": ["2026-06-01", "2026-06-12"] }
+```
+
+Date lists map to `IN`; only range maps map to `BETWEEN`.
 
 ## Supported Types And Operators
 
@@ -229,7 +231,6 @@ The library does not create indexes or migrations.
 - `EQUAL` and range filters can use normal database indexes when the consuming service creates them.
 - Case-insensitive text search using `upper(column)` may require expression indexes.
 - `CONTAINS` with `%value%` usually needs a PostgreSQL trigram index on large tables.
-- `STARTS_WITH` is more index-friendly than `CONTAINS`.
 - Consuming services are responsible for database index design.
 
 ## Build

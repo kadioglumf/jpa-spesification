@@ -1,7 +1,6 @@
 package com.kadioglumf.specification.search.takeoff;
 
 import com.kadioglumf.specification.search.definition.SearchOperator;
-import com.kadioglumf.specification.search.definition.SearchOptions;
 import com.kadioglumf.specification.search.error.SearchErrorCode;
 import com.thy.bagstar.bagstarcore.error.exception.BusinessException;
 
@@ -10,11 +9,10 @@ import java.util.Locale;
 import java.util.Map;
 
 public enum TakeoffFilterType {
+  NUMBER,
   TEXT,
-  CHECKBOX,
-  RADIO,
-  DATEPICKER,
-  TREEVIEW;
+  BOOLEAN,
+  DATE;
 
   public static TakeoffFilterType from(String value) {
     if (value == null || value.isBlank()) {
@@ -27,22 +25,26 @@ public enum TakeoffFilterType {
     }
   }
 
-  SearchOperator defaultOperator(Object value, SearchOptions options) {
+  SearchOperator defaultOperator(Object value) {
     return switch (this) {
-      case TEXT -> options.defaultTextOperator();
-      case CHECKBOX, TREEVIEW -> SearchOperator.IN;
-      case RADIO -> SearchOperator.EQUAL;
-      case DATEPICKER -> isRangeValue(value) ? SearchOperator.BETWEEN : SearchOperator.EQUAL;
+      case NUMBER -> isListValue(value) ? SearchOperator.IN : SearchOperator.EQUAL;
+      case TEXT -> SearchOperator.CONTAINS;
+      case BOOLEAN -> SearchOperator.EQUAL;
+      case DATE ->
+          isRangeMap(value)
+              ? SearchOperator.BETWEEN
+              : isListValue(value) ? SearchOperator.IN : SearchOperator.EQUAL;
     };
   }
 
-  private static boolean isRangeValue(Object value) {
-    if (value instanceof Collection<?> collection) {
-      return collection.size() == 2;
+  private static boolean isListValue(Object value) {
+    if (value instanceof Collection<?>) {
+      return true;
     }
-    if (value instanceof Object[] array) {
-      return array.length == 2;
-    }
+    return value instanceof Object[];
+  }
+
+  private static boolean isRangeMap(Object value) {
     if (value instanceof Map<?, ?> map) {
       return hasAny(map, "from", "start", "min", "begin", "startDate")
           && hasAny(map, "to", "end", "max", "finish", "endDate");

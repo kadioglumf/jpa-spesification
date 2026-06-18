@@ -6,6 +6,7 @@ import com.kadioglumf.specification.search.error.SearchErrorCode;
 import com.kadioglumf.specification.search.takeoff.NormalizedSearchFilter;
 import com.kadioglumf.specification.search.takeoff.TakeoffSearchRequestParser;
 import com.kadioglumf.specification.search.takeoff.TakeoffTableRequest;
+import com.kadioglumf.specification.search.takeoff.TakeoffTableSort;
 import com.thy.bagstar.bagstarcore.error.exception.BusinessException;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
@@ -15,6 +16,7 @@ import jakarta.persistence.criteria.From;
 import jakarta.persistence.criteria.Order;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -80,24 +82,60 @@ public class SearchSpecificationBuilder {
       SearchFieldRegistry registry,
       TakeoffTableRequest request,
       Map<String, From<?, ?>> joinCache) {
-    String sortField = request.sortField();
-    if (sortField == null || sortField.isBlank()) {
-      sortField = registry.options().defaultSortField();
-    }
-    if (sortField == null || sortField.isBlank()) {
-      return;
+    List<Order> orders = new ArrayList<>();
+    if (request.sorts() != null && !request.sorts().isEmpty()) {
+      for (TakeoffTableSort sort : request.sorts()) {
+        orders.add(createOrder(root, cb, registry, joinCache, sort));
+      }
+    } else {
+      Order order = createLegacyOrder(root, cb, registry, request, joinCache);
+      if (order != null) {
+        orders.add(order);
+      }
     }
 
+    if (!orders.isEmpty()) {
+      query.orderBy(orders);
+    }
+  }
+
+  private Order createLegacyOrder(
+      Root<?> root,
+      CriteriaBuilder cb,
+      SearchFieldRegistry registry,
+      TakeoffTableRequest request,
+      Map<String, From<?, ?>> joinCache) {
+    String sortField = request.sortField();
+    if (sortField == null || sortField.isBlank()) {
+      return null;
+    }
+
+    return createOrder(root, cb, registry, joinCache, sortField, parseDirection(request.sortOrder()));
+  }
+
+  private Order createOrder(
+      Root<?> root,
+      CriteriaBuilder cb,
+      SearchFieldRegistry registry,
+      Map<String, From<?, ?>> joinCache,
+      TakeoffTableSort sort) {
+    if (sort == null) {
+      throw new BusinessException(SearchErrorCode.INVALID_SORT_ORDER);
+    }
+    return createOrder(root, cb, registry, joinCache, sort.field(), parseDirection(sort.order()));
+  }
+
+  private Order createOrder(
+      Root<?> root,
+      CriteriaBuilder cb,
+      SearchFieldRegistry registry,
+      Map<String, From<?, ?>> joinCache,
+      String sortField,
+      Sort.Direction direction) {
     var definition = registry.requireSortable(sortField);
-    Sort.Direction direction =
-        request.sortField() == null || request.sortField().isBlank()
-            ? registry.options().defaultSortDirection()
-            : parseDirection(request.sortOrder());
-    Order order =
-        direction.isAscending()
-            ? cb.asc(pathResolver.resolve(root, definition, joinCache))
-            : cb.desc(pathResolver.resolve(root, definition, joinCache));
-    query.orderBy(order);
+    return direction.isAscending()
+        ? cb.asc(pathResolver.resolve(root, definition, joinCache))
+        : cb.desc(pathResolver.resolve(root, definition, joinCache));
   }
 
   private Sort.Direction parseDirection(String sortOrder) {
